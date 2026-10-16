@@ -1,0 +1,37 @@
+metadata:
+  version: 1.0.0
+  description: "widget admission: a Widget is admitted if and only if 1 <= replicas <= 5"
+  references:
+  - 'Kubernetes dynamic admission control: AdmissionReview v1'
+equations:
+  replica_bound:
+    formula: "allowed == (1 <= replicas && replicas <= 5)"
+    invariants:
+    - No widget outside the bound is admitted
+    - No widget inside the bound is refused
+    preconditions:
+    - 'the review carries spec.replicas as an integer, or the review is refused'
+    postconditions:
+    - 'a refused review carries a message naming the bound'
+    lean_theorem: none_repository_fact
+proof_obligations:
+- type: invariant
+  property: "verdict equals membership in the replica bound"
+falsification_tests:
+- id: FALSIFY-OP-001
+  rule: "a verdict that ignores the bound is caught"
+  prediction: "validate_iff_within_bound fails for any n where allowed differs from the bound"
+  if_fails: "the webhook would admit or refuse widgets at the wrong replica count"
+kani_harnesses:
+- id: KANI-OP-001
+  obligation: "verdict equals membership in the replica bound"
+  bound: 4
+  strategy: bounded_int
+  solver: cadical
+qa_gate:
+  id: F-OP-001
+  name: "replica bound contract"
+  description: "admission verdict matches the declared bound"
+  checks:
+  - validation
+  - falsification
